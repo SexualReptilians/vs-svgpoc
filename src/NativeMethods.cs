@@ -35,18 +35,20 @@ namespace RSvg
         RsvgUnit unit;
     }
 
-    internal struct RsvgRectangle {
+    // a struct is being passed
+    internal class RsvgRectangle {
         double x;
         double y;
         double width;
         double height;
     };
 
-    // todo gboolean implicit return type conversions
     
     internal static class NativeMethods
     { 
+        //   disable resharper warnings for names   //
         //// ReSharper disable InconsistentNaming ////
+        
         
         // Windows: "librsvg-2-2"
         // Linux:   "librsvg-2"
@@ -76,7 +78,7 @@ namespace RSvg
          * my_class_t *aClass   - MyClass aClass  (if data type)    (ICloneable with public object Clone() => this.MemberwiseClone(); ?)
          * my_class_t *aClass   - [out] MyClass aClass              (ICloneable with public object Clone() => this.MemberwiseClone(); ?)
          * my_struct_t *<ret>   - <ret> IntPtr
-         * my_struct_t *aStruct - IntPtr
+         * my_struct_t *aStruct - IntPtr/"Declare my_struct_t as class instead of struct and don't pass it by ref"
          * my_struct_t *aStruct - [out] out MyStruct aStruct        (c# struct field ordering should match)
          * const char *<ret>    - <ret> IntPtr                      (use PtrToStringAuto(IntPtr ptr) to obtain the string)
         /*/
@@ -95,32 +97,65 @@ namespace RSvg
         internal static extern int rsvg_handle_render_cairo(IntPtr handle, IntPtr cr);
         
         [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.14
-        internal static extern int rsvg_handle_render_cairo_sub(IntPtr handle, IntPtr cr, [MarshalAs(UnmanagedType.LPStr)]string id);
+        internal static extern int rsvg_handle_render_cairo_sub(IntPtr handle, IntPtr cr, [CanBeNull] [MarshalAs(UnmanagedType.LPStr)]string id);
         
-        [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.14
-        internal static extern int rsvg_handle_render_document(IntPtr handle, IntPtr cr);
-
+        [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.46
+        internal static extern int rsvg_handle_render_document(IntPtr handle, IntPtr cr, RsvgRectangle viewport, out IntPtr error);
+        
+        [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.46
+        internal static extern int rsvg_handle_render_element(
+            IntPtr handle, 
+            IntPtr cr, 
+            [CanBeNull] [MarshalAs(UnmanagedType.LPStr)]string id,
+            RsvgRectangle element_viewport, 
+            out IntPtr error);
+        
+        [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.46
+        internal static extern int rsvg_handle_render_layer(
+            IntPtr handle, 
+            IntPtr cr, 
+            [CanBeNull] [MarshalAs(UnmanagedType.LPStr)]string id,
+            RsvgRectangle viewport, 
+            out IntPtr error);
+        
         
         /* Dimensions */
         [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.14
         internal static extern void rsvg_handle_get_dimensions(IntPtr handle, out RsvgDimensionData dimension_data);
         
         [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.22
-        internal static extern int rsvg_handle_get_dimensions_sub(IntPtr handle, out RsvgDimensionData dimension_data,  [MarshalAs(UnmanagedType.LPStr)]string id);
+        internal static extern int rsvg_handle_get_dimensions_sub(IntPtr handle, out RsvgDimensionData dimension_data, [CanBeNull] [MarshalAs(UnmanagedType.LPStr)]string id);
 
         [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.22
-        internal static extern int rsvg_handle_get_position_sub(IntPtr handle, out RsvgPositionData position_data,  [MarshalAs(UnmanagedType.LPStr)]string id);
+        internal static extern int rsvg_handle_get_position_sub(IntPtr handle, out RsvgPositionData position_data, [CanBeNull] [MarshalAs(UnmanagedType.LPStr)]string id);
         
         [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.14
         internal static extern void rsvg_handle_get_intrinsic_dimensions(
             IntPtr handle, 
-            out int out_has_width,
-            out RsvgLength out_width,
-            out int out_has_height, 
-            out RsvgLength out_height,
-            out int out_has_viewbox,
-            out RsvgRectangle out_viewbox);
+            [CanBeNull] out int out_has_width,
+            [CanBeNull] out RsvgLength out_width,
+            [CanBeNull] out int out_has_height, 
+            [CanBeNull] out RsvgLength out_height,
+            [CanBeNull] out int out_has_viewbox,
+            [CanBeNull] out RsvgRectangle out_viewbox);
 
+        [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.46
+        internal static extern int rsvg_handle_get_geometry_for_layer(
+            IntPtr handle, 
+            [CanBeNull] [MarshalAs(UnmanagedType.LPStr)]string id,
+            RsvgRectangle viewport,
+            [CanBeNull] RsvgRectangle out_ink_rect,
+            [CanBeNull] RsvgRectangle out_logical_rect,
+            out IntPtr error);
+
+        [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.46
+        internal static extern int rsvg_handle_get_geometry_for_element(
+            IntPtr handle, 
+            [CanBeNull] [MarshalAs(UnmanagedType.LPStr)]string id,
+            [CanBeNull] RsvgRectangle out_ink_rect,
+            [CanBeNull] RsvgRectangle out_logical_rect,
+            out IntPtr error);
+        
         [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.8
         internal static extern void rsvg_handle_set_dpi(IntPtr handle, double dpi);
 
@@ -134,5 +169,9 @@ namespace RSvg
 
         [DllImport(rsvg, CallingConvention = CallingConvention.Cdecl)]  // since 2.14
         internal static extern int rsvg_handle_set_stylesheet(IntPtr handle, byte[] css, int len, out IntPtr error);
+    }
+
+    internal class CanBeNullAttribute : Attribute
+    {
     }
 }

@@ -75,7 +75,7 @@ namespace RSvg
         {
             const int width = 25;
             const int height = 25;
-            const float scale = 0.025f;
+            const float scale = 1f;
 
             IAsset svg = capi.Assets.Get(new AssetLocation("testdomain", "textures/test.svg"));
             System.Diagnostics.Debug.WriteLine(svg.Location.Path);

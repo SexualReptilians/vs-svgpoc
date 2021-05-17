@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using OpenTK.Graphics.OpenGL;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
+using Vintagestory.API.Config;
+using Vintagestory.API.Util;
 
 namespace RSvg
 {
@@ -22,7 +26,8 @@ namespace RSvg
 
         private bool Event_IsPlayerReady(ref EnumHandling handling)
         {
-            dialog.TryOpen();
+            bool a = dialog.TryOpen();
+            System.Diagnostics.Debug.WriteLine($"was opened?: ${a}" );
             return true;
         }
     }
@@ -82,6 +87,10 @@ namespace RSvg
 
         private void SetupDialog()      // todo pass width,height as params, compute
         {
+            const int width = 25;
+            const int height = 25;
+            const float scale = 0.025f;
+            
             IAsset svg = capi.Assets.Get(new AssetLocation("testdomain", "textures/test.svg"));
             System.Diagnostics.Debug.WriteLine(svg.Location.Path);
 
@@ -109,12 +118,12 @@ namespace RSvg
             // as there is no need to copy memory, compared to marshalling values.
             unsafe
             {
-                byte[] buffer = new byte[300*300*4]; // w*h*4
+                byte[] buffer = new byte[width*height*4]; // w*h*4
                 fixed (byte* p = buffer)
                 {
                     IntPtr ptr = (IntPtr) p;
-                    NanoSvg.NativeMethods.nsvgRasterize(ras, image, 0,0,1, ptr, 300, 300, 300*4);
-                    GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, 300, 300, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
+                    NanoSvg.NativeMethods.nsvgRasterize(ras, image, 0,0,scale, ptr, width, height, width*4);
+                    GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, width, height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
                 }
             }
 
@@ -123,31 +132,167 @@ namespace RSvg
             NanoSvg.NativeMethods.nsvgDelete(image);
             NanoSvg.NativeMethods.nsvgDeleteRasterizer(ras);
 
-            ownTexture = new LoadedTexture(capi, num, 300, 300);
+            ownTexture = new LoadedTexture(capi, num, width, height);
+
+            try
+            {
+                SetupGui();
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine($"bruh: ${e}" );
+            }
         }
         
         public override void OnRenderGUI(float deltaTime)
         {
             // Render2DLoadedTexture nicely takes the texture itself without the need to specify width and height
-            capi.Render.Render2DLoadedTexture(ownTexture, 100, 100, 9999);
+            // capi.Render.Render2DLoadedTexture(ownTexture, 100, 100, 9999);
+            this.SingleComposer = this.mainWindow;
+            base.OnRenderGUI(deltaTime);
         }
 
-        private void setupGui()     // todo wip, no touchie you wyvern >:(
+
+        private GuiComposer mainWindow;
+        
+        private void SetupGui()     // todo wip, no touchie you wyvern >:(
         {
             var mainBounds = ElementStdBounds.AutosizedMainDialog.WithAlignment(EnumDialogArea.CenterFixed).WithFixedPosition(0.0, 100.0);  // 8
             var bkgrBounds = ElementBounds.Fill.WithFixedPadding(GuiStyle.ElementToDialogPadding);  // 7
-            var listBounds = ElementBounds.Fixed(0.0, 0.0, 500.0, 580);  // 2
+            var listBounds = ElementBounds.Fixed(GuiStyle.ElementToDialogPadding - 2.0, 50.0, 500.0, 580);  // 2
             var clipBounds = listBounds.ForkBoundingParent();   // 3
             var sideBounds = listBounds.FlatCopy().FixedGrow(6.0).WithFixedOffset(-3.0, -3.0);  // 4
             var scrlBounds = sideBounds.CopyOffsetedSibling(3.0 + listBounds.fixedWidth + 7.0).WithFixedWidth(20.0);    // 5
-            var backBounds = ElementBounds.FixedSize(0.0, 0.0).FixedUnder(clipBounds, 15.0).WithAlignment(EnumDialogArea.LeftFixed).WithFixedPadding(20.0, 4.0).WithFixedAlignmentOffset(-6.0, 3.0);    // 10
-            var exitBounds = ElementBounds.FixedSize(0.0, 0.0).FixedUnder(clipBounds, 18.0).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(20.0, 4.0).WithFixedAlignmentOffset(2.0, 0.0);    // 6 
+            var quitBounds = ElementBounds.FixedSize(0.0, 0.0).FixedUnder(clipBounds, 18.0).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(20.0, 4.0).WithFixedAlignmentOffset(2.0, 0.0);    // 6 
             
-            //this.capi.Gui.CreateCompo("SVG Test", mainBounds)
-            //    .AddHandbookStackList(); 
+            bkgrBounds.BothSizing = ElementSizing.FitToChildren;
+            bkgrBounds.WithChildren(sideBounds, listBounds, scrlBounds, quitBounds);
+            
+            System.Diagnostics.Debug.WriteLine("aAA");
+            
+            var sections = new List<GuiHandbookPage>
+            {
+                new GuiHandbookTextIconPage { pageCode = "a", Title = "Aaa", Text = "Aaaaa", Texture = ownTexture},
+                new GuiHandbookTextIconPage { pageCode = "b", Title = "Bbb", Text = "Bbbbbbb", Texture = ownTexture},
+                new GuiHandbookTextIconPage { pageCode = "c", Title = "Ccc", Text = "Cccc", Texture = ownTexture},
+                new GuiHandbookTextIconPage { pageCode = "d", Title = "Ddd", Text = "Dragon", Texture = ownTexture},
+                new GuiHandbookTextIconPage { pageCode = "e", Title = "Eee", Text = "Eeeeeeeeeee", Texture = ownTexture},
+            };
+
+            int count = 0;
+            foreach (var page in sections)
+            {
+                if (page is GuiHandbookTextIconPage textPage)
+                {
+                    System.Diagnostics.Debug.WriteLine("Init ");
+                    textPage.Init(capi);
+                    textPage.PageNumber = count;
+                    count++;
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine("bBB");
+            this.mainWindow = this.capi.Gui.CreateCompo("svgTest", mainBounds)
+                .AddShadedDialogBG(bkgrBounds)
+                .AddDialogTitleBar("SVG Sample", OnTitleBarClose)
+                .BeginChildElements(bkgrBounds)
+                .BeginClip(clipBounds)
+                .AddInset(sideBounds, 3)
+                .AddHandbookStackList(listBounds, OnLeftClickListElement, sections, "stackList")
+                .EndClip()
+                .AddVerticalScrollbar(OnNewScrollbarvalueOverviewPage, scrlBounds, "scrollbar")
+                .AddSmallButton(Lang.Get("general-close"), TryClose, quitBounds)
+                .EndChildElements()
+                .Compose();
+            
+            System.Diagnostics.Debug.WriteLine("C");
+            
+            this.mainWindow.GetScrollbar("scrollbar")
+                .SetHeights(580, (float) this.mainWindow.GetHandbookStackList("stackList").insideBounds.fixedHeight);
         }
 
+        private void OnTitleBarClose() => this.TryClose();
+
+        private void OnLeftClickListElement(int index)
+        {
+            
+        }
+        
+        private void OnNewScrollbarvalueOverviewPage(float value)
+        {
+            GuiElementHandbookList handbookStackList = this.mainWindow.GetHandbookStackList("stackList");
+            handbookStackList.insideBounds.fixedY = 3.0 - value;
+            handbookStackList.insideBounds.CalcWorldBounds();
+        }
     }
+    
+    
+    public class GuiHandbookTextIconPage : GuiHandbookPage
+  {
+    public string pageCode;
+    public string Title;
+    public string Text;
+    public string categoryCode = "guide";
+    public LoadedTexture Texture;
+    private LoadedTexture TextTexture;
+    private RichTextComponentBase[] comps;
+    public int PageNumber;
+    private string titleCached;
+
+    public override string PageCode => this.pageCode;
+
+    public override string CategoryCode => this.categoryCode;
+
+    public override void Dispose()
+    {
+      this.Texture?.Dispose();
+      this.Texture = (LoadedTexture) null;
+    }
+
+    public void Init(ICoreClientAPI capi)
+    {
+      if (this.Text.Length < (int) byte.MaxValue)
+        this.Text = Lang.Get(this.Text);
+      this.comps = VtmlUtil.Richtextify(capi, this.Text, CairoFont.WhiteSmallText().WithLineHeightMultiplier(1.2));
+      this.titleCached = Lang.Get(this.Title);
+    }
+
+    public override RichTextComponentBase[] GetPageText(
+      ICoreClientAPI capi,
+      ItemStack[] allStacks,
+      ActionConsumable<string> openDetailPageFor)
+    {
+      return this.comps;
+    }
+
+    public void Recompose(ICoreClientAPI capi)
+    {
+      this.TextTexture?.Dispose();
+      this.TextTexture = new TextTextureUtil(capi).GenTextTexture(Lang.Get(this.Title), CairoFont.WhiteSmallText());
+    }
+
+    public override float TextMatchWeight(string searchText)
+    {
+      if (this.titleCached.Equals(searchText, StringComparison.InvariantCultureIgnoreCase))
+        return 3f;
+      if (this.titleCached.StartsWith(searchText, StringComparison.InvariantCultureIgnoreCase))
+        return 2.5f;
+      if (this.titleCached.CaseInsensitiveContains(searchText))
+        return 2f;
+      return this.Text.CaseInsensitiveContains(searchText) ? 1f : 0.0f;
+    }
+
+    public override void RenderTo(ICoreClientAPI capi, double x, double y)
+    {
+      float num1 = (float) GuiElement.scaled(25.0);
+      float num2 = (float) GuiElement.scaled(10.0);
+      if (this.TextTexture == null)
+        this.Recompose(capi);
+      capi.Render.Render2DTexturePremultipliedAlpha(this.Texture.TextureId, x + (double) num2, y + (double) num1 / 4.0 - 3.0, (double) this.Texture.Width, (double) this.Texture.Height);
+      capi.Render.Render2DTexturePremultipliedAlpha(this.TextTexture.TextureId, x + (double) num2 + Texture.Width + 5, y + (double) num1 / 4.0 - 3.0, (double) this.Texture.Width, (double) this.Texture.Height);
+    }
+  }
+    
 }
 
 

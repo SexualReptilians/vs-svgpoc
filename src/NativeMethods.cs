@@ -5,10 +5,7 @@ namespace NanoSvg
 {
     internal static class NativeMethods
     {
-        //   disable resharper warnings for names   //
-        //// ReSharper disable InconsistentNaming ////
-        
-        private const string nsvg = "nanosvg64";
+        private const string Nsvg = "nanosvg";
         
         /*/
          *  hi
@@ -36,24 +33,24 @@ namespace NanoSvg
         
         
         /* Parsing (Image object) */
-        [DllImport(nsvg, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
         internal static extern IntPtr nsvgParseFromFile(
             [MarshalAs(UnmanagedType.LPStr)]string filename, 
             [MarshalAs(UnmanagedType.LPStr)]string units,
             float dpi);
 
-        [DllImport(nsvg, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
         internal static extern IntPtr nsvgParse(
             [MarshalAs(UnmanagedType.LPStr)]string input, 
             [MarshalAs(UnmanagedType.LPStr)]string units,
             float dpi);
 
-        [DllImport(nsvg, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
         internal static extern void nsvgDelete(IntPtr image);
 
         
         /* Rasterizing */
-        [DllImport(nsvg, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
         internal static extern IntPtr nsvgCreateRasterizer();
         
         // Rasterizes SVG image, returns RGBA image (non-premultiplied alpha)
@@ -64,8 +61,8 @@ namespace NanoSvg
         //   dst - pointer to destination image data, 4 bytes per pixel (RGBA)
         //   w - width of the image to render
         //   h - height of the image to render
-        //   stride - number of bytes per scaleline in the destination buffer (usually w * 4)
-        [DllImport(nsvg, CallingConvention = CallingConvention.Cdecl)]
+        //   stride - number of bytes per scaleLine in the destination buffer (usually w * 4)
+        [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
         internal static extern void nsvgRasterize(
             IntPtr rasterizer,
             IntPtr image,
@@ -77,7 +74,7 @@ namespace NanoSvg
             int h, 
             int stride);
         
-        [DllImport(nsvg, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
         internal static extern void nsvgDeleteRasterizer(IntPtr rasterizer);
 
     }

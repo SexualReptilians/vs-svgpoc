@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
 using NanoSvg;
-using OpenTK.Graphics.OpenGL;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
@@ -13,22 +10,17 @@ namespace SVGPoc
     public class GuiSvgSamples : GuiDialog
     {
         public override string ToggleKeyCombinationCode => "SVG PoC window toggle";
-        private LoadedTexture ownTexture;
-        private readonly IntPtr rasterizer;
+        private readonly SvgLoader svgLoader;
 
+        private List<GuiHandbookPage> sections;
+        private GuiComposer mainWindow;
+        
         public GuiSvgSamples(ICoreClientAPI capi) : base(capi)
         {
-            this.rasterizer = NativeMethods.nsvgCreateRasterizer();
-            if (this.rasterizer == IntPtr.Zero)
-            {
-                System.Diagnostics.Debug.WriteLine("RASTER INIT ERROR");
-                throw new Win32Exception(Marshal.GetLastWin32Error());
-            }
-            
-            SetupDialog();
-            
             try
             {
+                this.svgLoader = new SvgLoader(capi);
+                SetupPages();
                 SetupGui();
             }
             catch (Exception e)
@@ -37,79 +29,104 @@ namespace SVGPoc
             }
         }
 
-        // todo get system dpi
-        // if scale == 0.0f, compute scale based on passed w/h and svg w/h 
-        private void SetupDialog(int width = 25, int height = 25, float scale = 1.0f, float offX = 0, float offY = 0, float dpi = 96)
+        private void SetupPages()
         {
-            IAsset svg = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/test.svg"));
-            System.Diagnostics.Debug.WriteLine(svg.Location.Path);
-
-            IntPtr image = NativeMethods.nsvgParse(svg.ToText(), "px", dpi);
-            if (image == IntPtr.Zero)
-            {
-                System.Diagnostics.Debug.WriteLine("SVG READ FAILED");
-                throw new Win32Exception(Marshal.GetLastWin32Error());
-            }
-
-            NsvgSize size;
-            NsvgViewbox viewbox;
+            IAsset tiger = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/tiger.svg"));
+            IAsset cam = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/AJ_Digital_Camera.svg"));
+            IAsset acid = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/acid.svg"));
+            IAsset alpha = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/alphachannel.svg"));
+            IAsset car = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/car.svg"));
+            IAsset clip = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/clippath.svg"));
+            IAsset dash = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/dashes.svg"));
+            IAsset car2 = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/gallardo.svg"));
+            IAsset g1 = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/gaussian1.svg"));
+            IAsset g2 = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/gaussian3.svg"));
+            IAsset grad = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/lineargradient2.svg"));
+            IAsset rgrad = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/radialgradient2.svg"));
+            IAsset polyl = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/shapes-polyline-01-t.svg"));
             
-            NativeMethods.nsvgImageGetSize(image, out size);
-            System.Diagnostics.Debug.WriteLine($"Size: w {size.width}, h {size.height}");
-            
-            NativeMethods.nsvgImageGetViewbox(image, out viewbox);
-            System.Diagnostics.Debug.WriteLine($"View: x {viewbox.viewMinx}, y {viewbox.viewMiny}, w {viewbox.viewWidth}, h {viewbox.viewHeight}");
-
-            int num = GL.GenTexture();
-            GL.BindTexture(TextureTarget.Texture2D, num);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-            // We need to get a pointer to our byte array to store our pixel data.
-            // Using an unsafe context + pointers is better in terms of performance
-            // as there is no need to copy memory, compared to marshalling values.
-            unsafe
-            {
-                byte[] buffer = new byte[width*height*4]; // w*h*4
-                fixed (byte* p = buffer)
-                {
-                    IntPtr ptr = (IntPtr) p;
-                    NativeMethods.nsvgRasterize(this.rasterizer, image, offX,offY,scale, ptr, width, height, width*4);
-                    GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, width, height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
-                }
-            }
-
-            NativeMethods.nsvgDelete(image);
-
-            this.ownTexture = new LoadedTexture(this.capi, num, width, height);
-        }
-
-        public override void OnGuiClosed()
-        {
-            base.OnGuiClosed();
-            NativeMethods.nsvgDeleteRasterizer(this.rasterizer);
-        }
-
-        public override void OnRenderGUI(float deltaTime)
-        {
-            this.SingleComposer = this.mainWindow;
-            base.OnRenderGUI(deltaTime);
-        }
-
-        private List<GuiHandbookPage> sections;
-        private GuiComposer mainWindow;
-        
-        private void SetupGui()
-        {
             // Texture is preview icon, LargeTexture is the actual preview when clicked.
             // Title appears on the list (Text does nothing rn)
             this.sections = new List<GuiHandbookPage> 
             {
-                new GuiHandbookTextIconPage { Title = "Aaa", Texture = this.ownTexture, LargeTexture = this.ownTexture},
-                new GuiHandbookTextIconPage { Title = "Bbb", Texture = this.ownTexture, LargeTexture = this.ownTexture},
-                new GuiHandbookTextIconPage { Title = "Ccc", Texture = this.ownTexture, LargeTexture = this.ownTexture},
-                new GuiHandbookTextIconPage { Title = "Ddd", Texture = this.ownTexture, LargeTexture = this.ownTexture},
-                new GuiHandbookTextIconPage { Title = "Eee", Texture = this.ownTexture, LargeTexture = this.ownTexture},
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Tiger", 
+                    Texture = this.svgLoader.LoadSvg(tiger, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(tiger)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Acid Warning", 
+                    Texture = this.svgLoader.LoadSvg(acid, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(acid)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Camera", 
+                    Texture = this.svgLoader.LoadSvg(cam, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(cam)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Car 1", 
+                    Texture = this.svgLoader.LoadSvg(car, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(car)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Car 2", 
+                    Texture = this.svgLoader.LoadSvg(car2, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(car2)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Alpha Channel Test", 
+                    Texture = this.svgLoader.LoadSvg(alpha, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(alpha)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Clipping Path Test", 
+                    Texture = this.svgLoader.LoadSvg(clip, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(clip)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Dashes Test", 
+                    Texture = this.svgLoader.LoadSvg(dash, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(dash)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Polyline Test", 
+                    Texture = this.svgLoader.LoadSvg(polyl, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(polyl)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Gaussian Blur Test 1", 
+                    Texture = this.svgLoader.LoadSvg(g1, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(g1)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Gaussian Blur Test 2", 
+                    Texture = this.svgLoader.LoadSvg(g2, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(g2)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Linear Gradient Test", 
+                    Texture = this.svgLoader.LoadSvg(grad, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(grad)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Radial Gradient Test", 
+                    Texture = this.svgLoader.LoadSvg(rgrad, 32, 32), 
+                    LargeTexture = this.svgLoader.LoadSvg(rgrad)
+                },
             };
 
             var count = 0;
@@ -122,7 +139,11 @@ namespace SVGPoc
                 textPage.Init(this.capi);
                 count++;
             }
+        }
 
+
+        private void SetupGui()
+        {
             var mainBounds = ElementStdBounds.AutosizedMainDialog.WithAlignment(EnumDialogArea.CenterFixed).WithFixedPosition(0.0, 100.0);  // 8
             var bkgrBounds = ElementBounds.Fill.WithFixedPadding(GuiStyle.ElementToDialogPadding);  // 7
             var listBounds = ElementBounds.Fixed(GuiStyle.ElementToDialogPadding - 2.0, 50.0, 500.0, 580);  // 2
@@ -151,6 +172,12 @@ namespace SVGPoc
                 .SetHeights(580, (float) this.mainWindow.GetHandbookStackList("stackList").insideBounds.fixedHeight);
         }
 
+        public override void OnRenderGUI(float deltaTime)
+        {
+            this.SingleComposer = this.mainWindow;
+            base.OnRenderGUI(deltaTime);
+        }
+        
         private void OnTitleBarClose() => TryClose();
 
         private void OnLeftClickListElement(int index)

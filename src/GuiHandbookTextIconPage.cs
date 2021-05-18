@@ -22,7 +22,7 @@ namespace SVGPoc
                 capi.Render.Render2DTexturePremultipliedAlpha(this.Texture.TextureId, x + num2, y + num1 / 4.0 - 3.0, this.Texture.Width, this.Texture.Height);
             if (this.textTexture == null)
                 Recompose(capi);
-            capi.Render.Render2DTexturePremultipliedAlpha(this.textTexture.TextureId, x + num2 + this.textTexture.Width + 5, y + num1 / 4.0 - 3.0, this.textTexture.Width, this.textTexture.Height);
+            capi.Render.Render2DTexturePremultipliedAlpha(this.textTexture.TextureId, x + num2 + 50, y + num1 / 4.0 - 3.0, this.textTexture.Width, this.textTexture.Height);
         }
     }
 }

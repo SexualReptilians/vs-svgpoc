@@ -15,7 +15,7 @@ namespace SVGPoc
         {
             this.counter += deltaTime;
             if (this.DisplayTexture != null)
-                this.capi.Render.Render2DLoadedTexture(this.DisplayTexture, 100 + this.counter*2, 100 + this.counter*2, 9999);
+                this.capi.Render.Render2DLoadedTexture(this.DisplayTexture, (int)(100 + this.counter*2), (int)(100 + this.counter*2), 9999);
         }
 
         public override void OnMouseDown(MouseEvent args)

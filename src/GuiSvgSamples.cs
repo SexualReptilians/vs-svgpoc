@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using NanoSvg;
 using OpenTK.Graphics.OpenGL;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
@@ -17,7 +18,7 @@ namespace SVGPoc
 
         public GuiSvgSamples(ICoreClientAPI capi) : base(capi)
         {
-            this.rasterizer = NanoSvg.NativeMethods.nsvgCreateRasterizer();
+            this.rasterizer = NativeMethods.nsvgCreateRasterizer();
             if (this.rasterizer == IntPtr.Zero)
             {
                 System.Diagnostics.Debug.WriteLine("RASTER INIT ERROR");
@@ -43,13 +44,22 @@ namespace SVGPoc
             IAsset svg = this.capi.Assets.Get(new AssetLocation("testdomain", "textures/test.svg"));
             System.Diagnostics.Debug.WriteLine(svg.Location.Path);
 
-            IntPtr image = NanoSvg.NativeMethods.nsvgParse(svg.ToText(), "px", dpi);
+            IntPtr image = NativeMethods.nsvgParse(svg.ToText(), "px", dpi);
             if (image == IntPtr.Zero)
             {
                 System.Diagnostics.Debug.WriteLine("SVG READ FAILED");
                 throw new Win32Exception(Marshal.GetLastWin32Error());
             }
+
+            NsvgSize size;
+            NsvgViewbox viewbox;
             
+            NativeMethods.nsvgImageGetSize(image, out size);
+            System.Diagnostics.Debug.WriteLine($"Size: w {size.width}, h {size.height}");
+            
+            NativeMethods.nsvgImageGetViewbox(image, out viewbox);
+            System.Diagnostics.Debug.WriteLine($"View: x {viewbox.viewMinx}, y {viewbox.viewMiny}, w {viewbox.viewWidth}, h {viewbox.viewHeight}");
+
             int num = GL.GenTexture();
             GL.BindTexture(TextureTarget.Texture2D, num);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
@@ -64,12 +74,12 @@ namespace SVGPoc
                 fixed (byte* p = buffer)
                 {
                     IntPtr ptr = (IntPtr) p;
-                    NanoSvg.NativeMethods.nsvgRasterize(this.rasterizer, image, offX,offY,scale, ptr, width, height, width*4);
+                    NativeMethods.nsvgRasterize(this.rasterizer, image, offX,offY,scale, ptr, width, height, width*4);
                     GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, width, height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
                 }
             }
 
-            NanoSvg.NativeMethods.nsvgDelete(image);
+            NativeMethods.nsvgDelete(image);
 
             this.ownTexture = new LoadedTexture(this.capi, num, width, height);
         }
@@ -77,7 +87,7 @@ namespace SVGPoc
         public override void OnGuiClosed()
         {
             base.OnGuiClosed();
-            NanoSvg.NativeMethods.nsvgDeleteRasterizer(this.rasterizer);
+            NativeMethods.nsvgDeleteRasterizer(this.rasterizer);
         }
 
         public override void OnRenderGUI(float deltaTime)
@@ -106,9 +116,10 @@ namespace SVGPoc
             foreach (var page in this.sections)
             {
                 if (!(page is GuiHandbookTextIconPage textPage)) continue;
-                textPage.Init(this.capi);
-                textPage.PageNumber = count;
                 textPage.pageCode = $"{count}";
+                textPage.PageNumber = count;
+                textPage.Text = "";
+                textPage.Init(this.capi);
                 count++;
             }
 

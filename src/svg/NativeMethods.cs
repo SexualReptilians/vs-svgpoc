@@ -44,6 +44,12 @@ namespace NanoSvg
             [MarshalAs(UnmanagedType.LPStr)]string input, 
             [MarshalAs(UnmanagedType.LPStr)]string units,
             float dpi);
+        
+        [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern void nsvgImageGetSize(IntPtr image, out NsvgSize outSize);
+        
+        [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern void nsvgImageGetViewbox(IntPtr image, out NsvgViewbox outViewbox);
 
         [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
         internal static extern void nsvgDelete(IntPtr image);

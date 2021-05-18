@@ -64,7 +64,10 @@
     <Compile Include="src\GuiHandbookTextIconPage.cs" />
     <Compile Include="src\GuiSvgSamples.cs" />
     <Compile Include="src\GuiTexturePreview.cs" />
-    <Compile Include="src\NativeMethods.cs" />
+    <Compile Include="src\svg\NanoSvg.cs" />
+    <Compile Include="src\svg\NativeMethods.cs" />
+    <Compile Include="src\svg\NsvgSize.cs" />
+    <Compile Include="src\svg\NsvgViewbox.cs" />
     <Compile Include="src\Wyvern.cs" />
   </ItemGroup>
   <ItemGroup>

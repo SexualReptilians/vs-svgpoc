@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -9,7 +8,7 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 
-namespace RSvg
+namespace SVGPoc
 {
     public class Wyvern : ModSystem
     {
@@ -32,23 +31,20 @@ namespace RSvg
         }
     }
 
-    public class GuiShowPreview : GuiDialog
+    public class GuiTexturePreview : GuiDialog
     {
         public override string ToggleKeyCombinationCode => "annoyingtextgui";
         private float counter = 0;
 
-        public GuiShowPreview(ICoreClientAPI capi) : base(capi)
-        {
-        }
+        public LoadedTexture DisplayTexture { set; private get;  }
 
-        public LoadedTexture ownTexture { set; private get;  }
-        
+        public GuiTexturePreview(ICoreClientAPI capi) : base(capi) {}
+
         public override void OnRenderGUI(float deltaTime)
         {
             counter += deltaTime;
-            // Render2DLoadedTexture nicely takes the texture itself without the need to specify width and height
-            if (ownTexture != null)
-                capi.Render.Render2DLoadedTexture(ownTexture, 100 + counter*2, 100 + counter*2, 9999);
+            if (DisplayTexture != null)
+                capi.Render.Render2DLoadedTexture(DisplayTexture, 100 + counter*2, 100 + counter*2, 9999);
         }
 
         public override void OnMouseDown(MouseEvent args)
@@ -64,36 +60,43 @@ namespace RSvg
     {
         public override string ToggleKeyCombinationCode => "annoyingtextgui";
         private LoadedTexture ownTexture;
+        private readonly IntPtr rasterizer;
 
         public GuiNanosvg(ICoreClientAPI capi) : base(capi)
         {
+            this.rasterizer = NanoSvg.NativeMethods.nsvgCreateRasterizer();
+            if (this.rasterizer == IntPtr.Zero)
+            {
+                System.Diagnostics.Debug.WriteLine("RASTER INIT ERROR");
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
+            
             SetupDialog();
+            
+            try
+            {
+                SetupGui();
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine($"bruh: ${e}" );
+            }
         }
 
         // todo pass width,height as params, compute
-        private void SetupDialog()
+        // if scale == 0.0f, compute scale based on passed w/h and svg w/h 
+        private void SetupDialog(int width = 25, int height = 25, float scale = 1.0f, float offX = 0, float offY = 0, float dpi = 96)
         {
-            const int width = 25;
-            const int height = 25;
-            const float scale = 1f;
-
             IAsset svg = capi.Assets.Get(new AssetLocation("testdomain", "textures/test.svg"));
             System.Diagnostics.Debug.WriteLine(svg.Location.Path);
 
-            IntPtr image = NanoSvg.NativeMethods.nsvgParse(svg.ToText(), "px", 96);     // todo get system dpi
+            IntPtr image = NanoSvg.NativeMethods.nsvgParse(svg.ToText(), "px", dpi);     // todo get system dpi
             if (image == IntPtr.Zero)
             {
                 System.Diagnostics.Debug.WriteLine("SVG READ FAILED");
                 throw new Win32Exception(Marshal.GetLastWin32Error());
             }
-
-            IntPtr ras = NanoSvg.NativeMethods.nsvgCreateRasterizer();
-            if (ras == IntPtr.Zero)
-            {
-                System.Diagnostics.Debug.WriteLine("RASTER INIT ERROR");
-                throw new Win32Exception(Marshal.GetLastWin32Error());
-            }
-
+            
             int num = GL.GenTexture();
             GL.BindTexture(TextureTarget.Texture2D, num);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
@@ -108,7 +111,7 @@ namespace RSvg
                 fixed (byte* p = buffer)
                 {
                     IntPtr ptr = (IntPtr) p;
-                    NanoSvg.NativeMethods.nsvgRasterize(ras, image, 0,0,scale, ptr, width, height, width*4);
+                    NanoSvg.NativeMethods.nsvgRasterize(rasterizer, image, offX,offY,scale, ptr, width, height, width*4);
                     GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, width, height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
                 }
             }
@@ -116,24 +119,19 @@ namespace RSvg
             // Close the image at least.
             // TODO: create and keep the rasterizer object somewhere, best used only once
             NanoSvg.NativeMethods.nsvgDelete(image);
-            NanoSvg.NativeMethods.nsvgDeleteRasterizer(ras);
 
-            ownTexture = new LoadedTexture(capi, num, width, height);
+            this.ownTexture = new LoadedTexture(capi, num, width, height);
 
-            try
-            {
-                SetupGui();
-            }
-            catch (Exception e)
-            {
-                System.Diagnostics.Debug.WriteLine($"bruh: ${e}" );
-            }
         }
-        
+
+        public override void OnGuiClosed()
+        {
+            base.OnGuiClosed();
+            NanoSvg.NativeMethods.nsvgDeleteRasterizer(rasterizer);
+        }
+
         public override void OnRenderGUI(float deltaTime)
         {
-            // Render2DLoadedTexture nicely takes the texture itself without the need to specify width and height
-            // capi.Render.Render2DLoadedTexture(ownTexture, 100, 100, 9999);
             this.SingleComposer = this.mainWindow;
             base.OnRenderGUI(deltaTime);
         }
@@ -141,21 +139,8 @@ namespace RSvg
         private List<GuiHandbookTextIconPage> sections;
         private GuiComposer mainWindow;
         
-        private void SetupGui()     // todo wip, no touchie you wyvern >:(
+        private void SetupGui()
         {
-            var mainBounds = ElementStdBounds.AutosizedMainDialog.WithAlignment(EnumDialogArea.CenterFixed).WithFixedPosition(0.0, 100.0);  // 8
-            var bkgrBounds = ElementBounds.Fill.WithFixedPadding(GuiStyle.ElementToDialogPadding);  // 7
-            var listBounds = ElementBounds.Fixed(GuiStyle.ElementToDialogPadding - 2.0, 50.0, 500.0, 580);  // 2
-            var clipBounds = listBounds.ForkBoundingParent();   // 3
-            var sideBounds = listBounds.FlatCopy().FixedGrow(6.0).WithFixedOffset(-3.0, -3.0);  // 4
-            var scrlBounds = sideBounds.CopyOffsetedSibling(3.0 + listBounds.fixedWidth + 7.0).WithFixedWidth(20.0);    // 5
-            var quitBounds = ElementBounds.FixedSize(0.0, 0.0).FixedUnder(clipBounds, 18.0).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(20.0, 4.0).WithFixedAlignmentOffset(2.0, 0.0);    // 6 
-
-            bkgrBounds.BothSizing = ElementSizing.FitToChildren;
-            bkgrBounds.WithChildren(sideBounds, listBounds, scrlBounds, quitBounds);
-
-            System.Diagnostics.Debug.WriteLine("aAA");
-            
             // Texture is preview icon, LargeTexture is the actual preview when clicked.
             // Title appears on the list (Text does nothing rn)
             sections = new List<GuiHandbookTextIconPage> 
@@ -167,19 +152,27 @@ namespace RSvg
                 new GuiHandbookTextIconPage { pageCode = "e", Title = "Eee", Text = "Eeeeeeeeeee", Texture = ownTexture, LargeTexture = ownTexture},
             };
 
-            int count = 0;
+            var count = 0;
             foreach (var page in sections)
             {
-                if (page is GuiHandbookTextIconPage textPage)
-                {
-                    System.Diagnostics.Debug.WriteLine("Init ");
-                    textPage.Init(capi);
-                    textPage.PageNumber = count;
-                    count++;
-                }
+                if (!(page is GuiHandbookTextIconPage textPage)) continue;
+                System.Diagnostics.Debug.WriteLine("Init ");
+                textPage.Init(capi);
+                textPage.PageNumber = count;
+                count++;
             }
 
-            System.Diagnostics.Debug.WriteLine("bBB");
+            var mainBounds = ElementStdBounds.AutosizedMainDialog.WithAlignment(EnumDialogArea.CenterFixed).WithFixedPosition(0.0, 100.0);  // 8
+            var bkgrBounds = ElementBounds.Fill.WithFixedPadding(GuiStyle.ElementToDialogPadding);  // 7
+            var listBounds = ElementBounds.Fixed(GuiStyle.ElementToDialogPadding - 2.0, 50.0, 500.0, 580);  // 2
+            var clipBounds = listBounds.ForkBoundingParent();   // 3
+            var sideBounds = listBounds.FlatCopy().FixedGrow(6.0).WithFixedOffset(-3.0, -3.0);  // 4
+            var scrlBounds = sideBounds.CopyOffsetedSibling(3.0 + listBounds.fixedWidth + 7.0).WithFixedWidth(20.0);    // 5
+            var quitBounds = ElementBounds.FixedSize(0.0, 0.0).FixedUnder(clipBounds, 18.0).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(20.0, 4.0).WithFixedAlignmentOffset(2.0, 0.0);    // 6 
+
+            bkgrBounds.BothSizing = ElementSizing.FitToChildren;
+            bkgrBounds.WithChildren(sideBounds, listBounds, scrlBounds, quitBounds);
+
             this.mainWindow = this.capi.Gui.CreateCompo("svgTest", mainBounds)
                 .AddShadedDialogBG(bkgrBounds)
                 .AddDialogTitleBar("SVG Sample", OnTitleBarClose)
@@ -188,12 +181,10 @@ namespace RSvg
                 .AddInset(sideBounds, 3)
                 .AddHandbookStackList(listBounds, OnLeftClickListElement, sections.Cast<GuiHandbookPage>().ToList(), "stackList")
                 .EndClip()
-                .AddVerticalScrollbar(OnNewScrollbarvalueOverviewPage, scrlBounds, "scrollbar")
+                .AddVerticalScrollbar(OnNewScrollbarValueOverviewPage, scrlBounds, "scrollbar")
                 .AddSmallButton(Lang.Get("general-close"), TryClose, quitBounds)
                 .EndChildElements()
                 .Compose();
-            
-            System.Diagnostics.Debug.WriteLine("C");
             
             this.mainWindow.GetScrollbar("scrollbar")
                 .SetHeights(580, (float) this.mainWindow.GetHandbookStackList("stackList").insideBounds.fixedHeight);
@@ -203,16 +194,16 @@ namespace RSvg
 
         private void OnLeftClickListElement(int index)
         {
-            GuiHandbookTextIconPage page = sections[index];
+            var page = sections[index];
             if (page?.LargeTexture != null)
             {
-                new GuiShowPreview(capi) {ownTexture = page.LargeTexture}.TryOpen();
+                new GuiTexturePreview(capi) {DisplayTexture = page.LargeTexture}.TryOpen();
             }
         }
 
-        private void OnNewScrollbarvalueOverviewPage(float value)
+        private void OnNewScrollbarValueOverviewPage(float value)
         {
-            GuiElementHandbookList handbookStackList = this.mainWindow.GetHandbookStackList("stackList");
+            var handbookStackList = this.mainWindow.GetHandbookStackList("stackList");
             handbookStackList.insideBounds.fixedY = 3.0 - value;
             handbookStackList.insideBounds.CalcWorldBounds();
         }
@@ -222,12 +213,12 @@ namespace RSvg
     public class GuiHandbookTextIconPage : GuiHandbookTextPage
     {
         public LoadedTexture LargeTexture;
-        private LoadedTexture TextTexture;
+        private LoadedTexture textTexture;
 
-        new public void Recompose(ICoreClientAPI capi)
+        private new void Recompose(ICoreClientAPI capi)
         {
-            this.TextTexture?.Dispose();
-            this.TextTexture = new TextTextureUtil(capi).GenTextTexture(Lang.Get(this.Title), CairoFont.WhiteSmallText());
+            this.textTexture?.Dispose();
+            this.textTexture = new TextTextureUtil(capi).GenTextTexture(Lang.Get(this.Title), CairoFont.WhiteSmallText());
         }
         
         public override void RenderTo(ICoreClientAPI capi, double x, double y)
@@ -236,9 +227,9 @@ namespace RSvg
             float num2 = (float) GuiElement.scaled(10.0);
             if (this.Texture != null)
                 capi.Render.Render2DTexturePremultipliedAlpha(this.Texture.TextureId, x + (double) num2, y + (double) num1 / 4.0 - 3.0, (double) this.Texture.Width, (double) this.Texture.Height);
-            if (this.TextTexture == null)
+            if (this.textTexture == null)
                 this.Recompose(capi);
-            capi.Render.Render2DTexturePremultipliedAlpha(this.TextTexture.TextureId, x + (double) num2 + TextTexture.Width + 5, y + (double) num1 / 4.0 - 3.0, (double) this.TextTexture.Width, (double) this.TextTexture.Height);
+            capi.Render.Render2DTexturePremultipliedAlpha(this.textTexture.TextureId, x + (double) num2 + textTexture.Width + 5, y + (double) num1 / 4.0 - 3.0, (double) this.textTexture.Width, (double) this.textTexture.Height);
         }
     }
 }

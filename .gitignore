@@ -3,6 +3,5 @@ obj/
 releases/
 .vs/
 *.csproj.user
-*.DotSettings
 *.DotSettings.user
 mods/

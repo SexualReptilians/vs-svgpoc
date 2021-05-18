@@ -65,7 +65,9 @@
     <Compile Include="src\Wyvern.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="mods\keep_this_dir" />
+    <Content Include="Folder.DotSettings" />
+    <Content Include="Folder.DotSettings.user" />
+    <Content Include="Wyvern.csproj.user" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

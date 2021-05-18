@@ -7,8 +7,8 @@
     <ProjectGuid>{203DFBF1-3599-43FD-8487-E1C79C2B788F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>VSMods</RootNamespace>
-    <AssemblyName>VSModLauncher</AssemblyName>
+    <RootNamespace>SVGPoc</RootNamespace>
+    <AssemblyName>SVGPoc</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />

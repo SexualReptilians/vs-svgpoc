@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Runtime.InteropServices;
 using Vintagestory.API.Common;
 
 // Assembly (DLL) stuff
@@ -14,9 +15,11 @@ using Vintagestory.API.Common;
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
 
+[assembly: ComVisible(false)]
+
 // Mod information stuff
 [assembly: ModDependency("game")]
-[assembly: ModInfo("SVGPoc", "_svgPoc", 
+[assembly: ModInfo("SVGPoc", "svgpoc0aaaaaaaaa", 
     Version = "1.5.0", 
     Authors = new[] { "Nexrem", "Lyrthras" },
     Website = "", 

@@ -48,6 +48,8 @@ namespace SVGPoc
             IAsset polyl = capi.Assets.Get(new AssetLocation("svgpoc", "textures/shapes-polyline-01-t.svg"));
             IAsset wyvern = capi.Assets.Get(new AssetLocation("svgpoc", "textures/wyvern.svg"));
             IAsset dragon = capi.Assets.Get(new AssetLocation("svgpoc", "textures/dragon.svg"));
+            IAsset strokesandcaps = capi.Assets.Get(new AssetLocation("svgpoc", "textures/strokes_and_caps.svg"));
+            IAsset dashes2 = capi.Assets.Get(new AssetLocation("svgpoc", "textures/dashes2.svg"));
 
             // Texture is preview icon, LargeTexture is the actual preview when clicked.
             // Title appears on the list (Text does nothing rn)
@@ -100,6 +102,18 @@ namespace SVGPoc
                     Title = "Dashes Test", 
                     Texture = svgLoader.LoadSvg(dash, 32, 32),
                     LargeTexture = svgLoader.LoadSvg(dash)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Dashes Test 2",
+                    Texture = svgLoader.LoadSvg(dashes2, 32, 32),
+                    LargeTexture = svgLoader.LoadSvg(dashes2)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Strokes and caps test",
+                    Texture = svgLoader.LoadSvg(strokesandcaps, 32, 32),
+                    LargeTexture = svgLoader.LoadSvg(strokesandcaps)
                 },
                 new GuiHandbookTextIconPage
                 {

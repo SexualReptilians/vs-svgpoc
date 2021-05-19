@@ -14,6 +14,7 @@ namespace SVGPoc
             this.textTexture = new TextTextureUtil(capi).GenTextTexture(Lang.Get(this.Title), CairoFont.WhiteSmallText());
         }
         
+        // override class in order to allow the rendering of two textures
         public override void RenderTo(ICoreClientAPI capi, double x, double y)
         {
             double posX = GuiElement.scaled(10.0);

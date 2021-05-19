@@ -11,11 +11,12 @@ namespace SVGPoc
 
         public GuiTexturePreview(ICoreClientAPI capi) : base(capi) {}
 
+        // Overlay large texture, move it around
         public override void OnRenderGUI(float deltaTime)
         {
-            this.counter += deltaTime;
-            if (this.DisplayTexture != null)
-                this.capi.Render.Render2DLoadedTexture(this.DisplayTexture, (int)(100 + this.counter*2), (int)(100 + this.counter*2), 9999);
+            counter += deltaTime;
+            if (DisplayTexture != null)
+                capi.Render.Render2DLoadedTexture(DisplayTexture, (int)(100 + counter*2), (int)(100 + counter*2), 9999);
         }
 
         public override void OnMouseDown(MouseEvent args)

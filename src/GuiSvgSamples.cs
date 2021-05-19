@@ -10,27 +10,29 @@ namespace SVGPoc
     public class GuiSvgSamples : GuiDialog
     {
         public override string ToggleKeyCombinationCode => "svgtoggle";
-        private readonly SvgLoader svgLoader;
 
-        private List<GuiHandbookPage> sections;
+        private readonly SvgLoader svgLoader;
+        private List<GuiHandbookPage> listItems;
         private GuiComposer mainWindow;
         
         public GuiSvgSamples(ICoreClientAPI capi) : base(capi)
         {
             try
             {
+                // attempt creation of rasterizer
                 svgLoader = new SvgLoader(capi);
                 SetupPages();
                 SetupGui();
             }
             catch (Exception e)
             {
-                System.Diagnostics.Debug.WriteLine($"bruh: ${e}" );
+                System.Diagnostics.Debug.WriteLine(e.Message);
             }
         }
 
         private void SetupPages()
         {
+            // Some testing samples
             IAsset tiger = capi.Assets.Get(new AssetLocation("svgpoc", "textures/tiger.svg"));
             IAsset cam = capi.Assets.Get(new AssetLocation("svgpoc", "textures/AJ_Digital_Camera.svg"));
             IAsset acid = capi.Assets.Get(new AssetLocation("svgpoc", "textures/acid.svg"));
@@ -44,14 +46,16 @@ namespace SVGPoc
             IAsset grad = capi.Assets.Get(new AssetLocation("svgpoc", "textures/lineargradient2.svg"));
             IAsset rgrad = capi.Assets.Get(new AssetLocation("svgpoc", "textures/radialgradient2.svg"));
             IAsset polyl = capi.Assets.Get(new AssetLocation("svgpoc", "textures/shapes-polyline-01-t.svg"));
-            
+            IAsset wyvern = capi.Assets.Get(new AssetLocation("svgpoc", "textures/wyvern.svg"));
+            IAsset dragon = capi.Assets.Get(new AssetLocation("svgpoc", "textures/dragon.svg"));
+
             // Texture is preview icon, LargeTexture is the actual preview when clicked.
             // Title appears on the list (Text does nothing rn)
-            sections = new List<GuiHandbookPage>
+            listItems = new List<GuiHandbookPage>
             {
                 new GuiHandbookTextIconPage
                 {
-                    Title = "Tiger", 
+                    Title = "Ghostscript Tiger",
                     Texture = svgLoader.LoadSvg(tiger, 32, 32),
                     LargeTexture = svgLoader.LoadSvg(tiger)
                 },
@@ -127,10 +131,23 @@ namespace SVGPoc
                     Texture = svgLoader.LoadSvg(rgrad, 32, 32),
                     LargeTexture = svgLoader.LoadSvg(rgrad)
                 },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Wyvern",
+                    Texture = svgLoader.LoadSvg(wyvern, 32, 32),
+                    LargeTexture = svgLoader.LoadSvg(wyvern)
+                },
+                new GuiHandbookTextIconPage
+                {
+                    Title = "Dragon",
+                    Texture = svgLoader.LoadSvg(dragon, 32, 32),
+                    LargeTexture = svgLoader.LoadSvg(dragon)
+                },
             };
 
+            // initialize the pages
             int count = 0;
-            foreach (var page in sections)
+            foreach (var page in listItems)
             {
                 if (!(page is GuiHandbookTextIconPage textPage)) continue;
                 textPage.pageCode = $"{count}";
@@ -144,6 +161,7 @@ namespace SVGPoc
 
         private void SetupGui()
         {
+            // Stolen from base implementation
             var mainBounds = ElementStdBounds.AutosizedMainDialog.WithAlignment(EnumDialogArea.CenterFixed).WithFixedPosition(0.0, 100.0);
             var bkgrBounds = ElementBounds.Fill.WithFixedPadding(GuiStyle.ElementToDialogPadding);
             var listBounds = ElementBounds.Fixed(GuiStyle.ElementToDialogPadding - 2.0, 50.0, 500.0, 580);
@@ -155,13 +173,14 @@ namespace SVGPoc
             bkgrBounds.BothSizing = ElementSizing.FitToChildren;
             bkgrBounds.WithChildren(sideBounds, listBounds, scrlBounds, quitBounds);
 
+            // Compose the window
             mainWindow = capi.Gui.CreateCompo("svgTest", mainBounds)
                 .AddShadedDialogBG(bkgrBounds)
                 .AddDialogTitleBar("SVG Sample", OnTitleBarClose)
                 .BeginChildElements(bkgrBounds)
                 .BeginClip(clipBounds)
                 .AddInset(sideBounds, 3)
-                .AddHandbookStackList(listBounds, OnLeftClickListElement, sections, "stackList")
+                .AddHandbookStackList(listBounds, OnLeftClickListElement, listItems, "stackList")
                 .EndClip()
                 .AddVerticalScrollbar(OnNewScrollbarValueOverviewPage, scrlBounds, "scrollbar")
                 .AddSmallButton(Lang.Get("general-close"), TryClose, quitBounds)
@@ -180,9 +199,10 @@ namespace SVGPoc
         
         private void OnTitleBarClose() => TryClose();
 
+        // Try and show the large texture overlay
         private void OnLeftClickListElement(int index)
         {
-            var page = sections[index];
+            var page = listItems[index];
             if (!(page is GuiHandbookTextIconPage textPage)) return;
             if (textPage.LargeTexture != null)
             {

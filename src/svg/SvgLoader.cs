@@ -12,11 +12,13 @@ namespace NanoSvg
         private readonly ICoreClientAPI capi;
         private IntPtr rasterizer;
 
-        public SvgLoader(ICoreClientAPI capi)
+        public SvgLoader(ICoreClientAPI _capi)
         {
-            this.capi = capi;
-            this.rasterizer = NativeMethods.nsvgCreateRasterizer();
-            if (this.rasterizer == IntPtr.Zero)
+            capi = _capi;
+
+            // Attempt to create the rasterizer
+            rasterizer = NativeMethods.nsvgCreateRasterizer();
+            if (rasterizer == IntPtr.Zero)
             {
                 System.Diagnostics.Debug.WriteLine("RASTER INIT ERROR");
                 throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -33,8 +35,10 @@ namespace NanoSvg
             float offY = 0;
             float dpi = 96;
 
-            if (this.rasterizer == IntPtr.Zero) throw new ObjectDisposedException("SvgLoader is already disposed!");
+            // Rasterizer doesnt exist
+            if (rasterizer == IntPtr.Zero) throw new ObjectDisposedException("SvgLoader is already disposed!");
             
+            // Attempt to parse SVG file from string
             IntPtr image = NativeMethods.nsvgParse(svgAsset.ToText(), "px", dpi);
             if (image == IntPtr.Zero)
             {
@@ -42,32 +46,37 @@ namespace NanoSvg
                 throw new Win32Exception(Marshal.GetLastWin32Error());
             }
 
+            // Attempt to obtain parsed size
             IntPtr sizeptr = NativeMethods.nsvgImageGetSize(image);
             if (sizeptr == IntPtr.Zero)
             {
                 System.Diagnostics.Debug.WriteLine("Size read failed");
                 throw new Win32Exception(Marshal.GetLastWin32Error());
             }
-
+            // Put parsed size into object
             NsvgSize size = Marshal.PtrToStructure<NsvgSize>(NativeMethods.nsvgImageGetSize(image));
-                
+
             // calc scale
-            if (width == 0 && height == 0)  // none supplied, use original size
+            // none supplied, use original size
+            if (width == 0 && height == 0)
             {
                 width = (int)(size.width * scale);
                 height = (int)(size.height * scale);
             }
-            else if (width == 0)    // height supplied, scale image down to height
+            // Width auto
+            else if (width == 0)
             {
                 scale = height / size.height;
                 width = (int)(size.width * scale);
             }
-            else if (height == 0)   // width supplied, scale image down to width
+            // Height auto
+            else if (height == 0)
             {
                 scale = width / size.width;
                 height = (int)(size.height * scale);
             }
-            else                    // all supplied, pick smaller
+            // Auto aspect ratio
+            else
             {
                 var scaleX = width / size.width;
                 var scaleY = height / size.height;
@@ -75,7 +84,8 @@ namespace NanoSvg
                 scale = scaleX < scaleY ? scaleX : scaleY;
             }
                 
-            // create mem texture
+            // create GL texture
+            // Stolen from base implementation
             int id = GL.GenTexture();
             GL.BindTexture(TextureTarget.Texture2D, id);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
@@ -84,29 +94,31 @@ namespace NanoSvg
             // We need to get a pointer to our byte array to store our pixel data.
             // Using an unsafe context + pointers is better in terms of performance
             // as there is no need to copy memory, compared to marshalling values.
+            // This is probably necessary because Marshal wont allocate large buffers to begin with.
             unsafe
             {
-                byte[] buffer = new byte[width * height * 4];   // rgba
+                byte[] buffer = new byte[width * height * 4]; // rgba
                 fixed (byte* p = buffer)
                 {
-                    IntPtr ptr = (IntPtr) p;
-                    NativeMethods.nsvgRasterize(this.rasterizer, image, offX,offY,scale, ptr, width, height, width*4);
-                    GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, width, height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
+                    // Rasterize
+                    NativeMethods.nsvgRasterize(rasterizer, image, offX,offY,scale, (IntPtr)p, width, height, width*4);
+                    // Make texture out of rasterised buffer
+                    GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, width, height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, (IntPtr)p);
                 }
             }
 
             // dispose
             NativeMethods.nsvgDelete(image);
 
-            return new LoadedTexture(this.capi, id, width, height);
+            return new LoadedTexture(capi, id, width, height);
         }
 
         ~SvgLoader()
         {
-            if (this.rasterizer != IntPtr.Zero)
+            if (rasterizer != IntPtr.Zero)
             {
-                NativeMethods.nsvgDeleteRasterizer(this.rasterizer);
-                this.rasterizer = IntPtr.Zero;
+                NativeMethods.nsvgDeleteRasterizer(rasterizer);
+                rasterizer = IntPtr.Zero;
             }
         } 
     }

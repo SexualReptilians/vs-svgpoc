@@ -9,7 +9,7 @@ namespace SVGPoc
 {
     public class GuiSvgSamples : GuiDialog
     {
-        public override string ToggleKeyCombinationCode => "SVG PoC window toggle";
+        public override string ToggleKeyCombinationCode => "svgtoggle";
         private readonly SvgLoader svgLoader;
 
         private List<GuiHandbookPage> sections;

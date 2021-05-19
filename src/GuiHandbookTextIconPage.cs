@@ -16,13 +16,20 @@ namespace SVGPoc
         
         public override void RenderTo(ICoreClientAPI capi, double x, double y)
         {
-            var num1 = (float) GuiElement.scaled(25.0);
-            var num2 = (float) GuiElement.scaled(10.0);
+            double posX = GuiElement.scaled(10.0);
+            double posY = GuiElement.scaled(25.0);
+
             if (this.Texture != null)
-                capi.Render.Render2DTexturePremultipliedAlpha(this.Texture.TextureId, x + num2, y + num1 / 4.0 - 3.0, this.Texture.Width, this.Texture.Height);
+            {
+                capi.Render.Render2DTexturePremultipliedAlpha(this.Texture.TextureId, x + posX, y + posY / 4.0 - 3.0, this.Texture.Width, this.Texture.Height);
+            }
+
             if (this.textTexture == null)
+            {
                 Recompose(capi);
-            capi.Render.Render2DTexturePremultipliedAlpha(this.textTexture.TextureId, x + num2 + 50, y + num1 / 4.0 - 3.0, this.textTexture.Width, this.textTexture.Height);
+            }
+
+            capi.Render.Render2DTexturePremultipliedAlpha(this.textTexture.TextureId, x + posX + 50, y + posY / 4.0 - 3.0, this.textTexture.Width, this.textTexture.Height);
         }
     }
 }

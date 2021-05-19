@@ -26,8 +26,13 @@ namespace NanoSvg
         // if width and height = 0 (unspecified), render at the svg's default size
         // if one of w or h is 0, scale down to the supplied dimension
         // scale param is only considered when width and height is both 0
-        public LoadedTexture LoadSvg(IAsset svgAsset, int width = 0, int height = 0, float scale = 1.0f, float offX = 0, float offY = 0, float dpi = 96)
+        public LoadedTexture LoadSvg(IAsset svgAsset, int width = 0, int height = 0)
         {
+            float scale = 1.0f;
+            float offX = 0;
+            float offY = 0;
+            float dpi = 96;
+
             if (this.rasterizer == IntPtr.Zero) throw new ObjectDisposedException("SvgLoader is already disposed!");
             
             IntPtr image = NativeMethods.nsvgParse(svgAsset.ToText(), "px", dpi);
@@ -36,9 +41,15 @@ namespace NanoSvg
                 System.Diagnostics.Debug.WriteLine("SVG READ FAILED");
                 throw new Win32Exception(Marshal.GetLastWin32Error());
             }
-            
-            NsvgSize size;
-            NativeMethods.nsvgImageGetSize(image, out size);
+
+            IntPtr sizeptr = NativeMethods.nsvgImageGetSize(image);
+            if (sizeptr == IntPtr.Zero)
+            {
+                System.Diagnostics.Debug.WriteLine("Size read failed");
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
+
+            NsvgSize size = Marshal.PtrToStructure<NsvgSize>(NativeMethods.nsvgImageGetSize(image));
                 
             // calc scale
             if (width == 0 && height == 0)  // none supplied, use original size

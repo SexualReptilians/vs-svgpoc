@@ -3,6 +3,22 @@ using System.Runtime.InteropServices;
 
 namespace NanoSvg
 {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NsvgSize
+    {
+        public float width;
+        public float height;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NsvgViewbox
+    {
+        public float viewMinx;
+        public float viewMiny;
+        public float viewWidth;
+        public float viewHeight;
+    }
+
     internal static class NativeMethods
     {
         private const string Nsvg = "nanosvg";
@@ -34,22 +50,16 @@ namespace NanoSvg
         
         /* Parsing (Image object) */
         [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern IntPtr nsvgParseFromFile(
-            [MarshalAs(UnmanagedType.LPStr)]string filename, 
-            [MarshalAs(UnmanagedType.LPStr)]string units,
-            float dpi);
+        internal static extern IntPtr nsvgParseFromFile([MarshalAs(UnmanagedType.LPStr)] string filename, [MarshalAs(UnmanagedType.LPStr)] string units, float dpi);
 
         [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern IntPtr nsvgParse(
-            [MarshalAs(UnmanagedType.LPStr)]string input, 
-            [MarshalAs(UnmanagedType.LPStr)]string units,
-            float dpi);
+        internal static extern IntPtr nsvgParse([MarshalAs(UnmanagedType.LPStr)] string input, [MarshalAs(UnmanagedType.LPStr)] string units, float dpi);
         
         [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern void nsvgImageGetSize(IntPtr image, out NsvgSize outSize);
+        internal static extern IntPtr nsvgImageGetSize(IntPtr image);
         
         [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern void nsvgImageGetViewbox(IntPtr image, out NsvgViewbox outViewbox);
+        internal static extern IntPtr nsvgImageGetViewbox(IntPtr image);
 
         [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
         internal static extern void nsvgDelete(IntPtr image);
@@ -69,16 +79,7 @@ namespace NanoSvg
         //   h - height of the image to render
         //   stride - number of bytes per scaleLine in the destination buffer (usually w * 4)
         [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern void nsvgRasterize(
-            IntPtr rasterizer,
-            IntPtr image,
-            float tx,
-            float ty,
-            float scale,
-            IntPtr dst,
-            int w, 
-            int h, 
-            int stride);
+        internal static extern void nsvgRasterize(IntPtr rasterizer, IntPtr image, float tx, float ty, float scale, IntPtr dst, int w, int h, int stride);
         
         [DllImport(Nsvg, CallingConvention = CallingConvention.Cdecl)]
         internal static extern void nsvgDeleteRasterizer(IntPtr rasterizer);
